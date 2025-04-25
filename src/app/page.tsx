@@ -57,7 +57,7 @@ const palette72Keys = ["A3", "A4", "A6", "A7", "A10", "A11", "A13", "B3", "B5", 
 // const palette24Keys = [...];
 
 const paletteOptions = {
-  'all': { name: `221全实色`, keys: allPaletteKeys },
+  'all': { name: `全色系291色`, keys: allPaletteKeys },
   '168': { name: '168色', keys: palette168Keys },
   '144': { name: '144色', keys: palette144Keys },
   '120': { name: '120色', keys: palette120Keys },

@@ -18,7 +18,7 @@ export default function CropPage() {
   const [isCropping, setIsCropping] = useState<boolean>(false);
   const [croppedImageSrc, setCroppedImageSrc] = useState<string | null>(null);
   const [cropArea, setCropArea] = useState<CropArea | null>(null);
-  const [granularity, setGranularity] = useState<number>(50); // 默认值
+  const [granularity, setGranularity] = useState<number>(50); // 默认值，保留用于传递给主页面
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const originalCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -33,14 +33,16 @@ export default function CropPage() {
     // 创建一个延迟解析的 Promise
     const calculateRatio = new Promise<number>((resolve) => {
       image.onload = () => {
+        // 使用固定的granularity值50来计算裁剪框的比例
+        const defaultGranularity = 50;
         const imageAspectRatio = image.height / image.width;
-        resolve(granularity / Math.max(1, Math.round(granularity * imageAspectRatio)));
+        resolve(defaultGranularity / Math.max(1, Math.round(defaultGranularity * imageAspectRatio)));
       };
       image.onerror = () => resolve(1); // 出错时使用默认值
     });
     
     return 1; // 初始返回1，实际值会在onload后通过状态更新
-  }, [originalImageSrc, granularity]);
+  }, [originalImageSrc]); // 移除granularity依赖，因为我们使用固定值
 
   // 处理文件选择
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -132,7 +134,7 @@ export default function CropPage() {
     img.src = imageSrc;
   };
 
-  // 处理横轴格子数变化
+  // 处理横轴格子数变化 (保留函数，但不在UI中使用)
   const handleGranularityChange = (event: ChangeEvent<HTMLInputElement>) => {
     const newGranularity = parseInt(event.target.value, 10);
     setGranularity(newGranularity);
@@ -194,29 +196,9 @@ export default function CropPage() {
         )}
         <input type="file" accept="image/jpeg, image/png" onChange={handleFileChange} ref={fileInputRef} className="hidden" />
 
-        {/* 裁剪界面 */}
+        {/* 裁剪界面 - 移除横轴格子数滑块 */}
         {originalImageSrc && isCropping && (
           <div className="w-full flex flex-col items-center space-y-5">
-            <div className="w-full max-w-lg">
-              <label htmlFor="granularity" className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-1.5">
-                横轴格子数: <span className="font-semibold text-blue-600">{granularity}</span>
-              </label>
-              <input
-                type="range"
-                id="granularity"
-                min="10"
-                max="100"
-                step="1"
-                value={granularity}
-                onChange={handleGranularityChange}
-                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-              />
-              <div className="flex justify-between text-xs text-gray-500 mt-0.5 px-1">
-                <span>粗</span><span>细</span>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">调整格子数将影响裁剪框的形状，尽量接近最终想要的效果。</p>
-            </div>
-            
             <ImageCropper
               imageSrc={originalImageSrc}
               targetAspectRatio={targetAspectRatio}
@@ -255,6 +237,9 @@ export default function CropPage() {
                   开始像素化处理
                 </button>
               </div>
+              <p className="text-xs text-center text-gray-500 mt-3">
+                横轴格子数将设为 {granularity}，可在下一步调整。
+              </p>
             </div>
           </div>
         )}
