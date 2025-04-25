@@ -175,6 +175,9 @@ export default function Home() {
   const [isManualColoringMode, setIsManualColoringMode] = useState<boolean>(false);
   const [selectedColor, setSelectedColor] = useState<MappedPixel | null>(null);
 
+  // ++ 添加裁剪相关状态 ++
+  const [hasCroppedImage, setHasCroppedImage] = useState<boolean>(false);
+
   const originalCanvasRef = useRef<HTMLCanvasElement>(null);
   const pixelatedCanvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -182,6 +185,32 @@ export default function Home() {
   // ++ Re-add touch refs needed for tooltip logic ++
   const touchStartPosRef = useRef<{ x: number; y: number; pageX: number; pageY: number } | null>(null);
   const touchMovedRef = useRef<boolean>(false);
+
+  // ++ 检查裁剪后的图像 ++
+  useEffect(() => {
+    // 在组件挂载时检查localStorage中是否有裁剪后的图像
+    const croppedImage = localStorage.getItem('croppedImage');
+    const savedGranularity = localStorage.getItem('granularity');
+    
+    if (croppedImage) {
+      setOriginalImageSrc(croppedImage);
+      setHasCroppedImage(true);
+      
+      if (savedGranularity) {
+        const granularityValue = parseInt(savedGranularity, 10);
+        if (!isNaN(granularityValue) && granularityValue >= 10 && granularityValue <= 100) {
+          setGranularity(granularityValue);
+        }
+      }
+      
+      // 清除localStorage，防止刷新页面时重复加载
+      localStorage.removeItem('croppedImage');
+      localStorage.removeItem('granularity');
+      
+      // 触发图像处理
+      setRemapTrigger(prev => prev + 1);
+    }
+  }, []);
 
   // --- Derived State ---
 
@@ -327,6 +356,9 @@ export default function Home() {
     const img = new window.Image();
     img.onload = () => {
       console.log("Image loaded successfully.");
+      
+      // 根据图片的尺寸计算网格维度
+      // 注意：如果是裁剪过的图像，宽高比已经调整过
       const aspectRatio = img.height / img.width;
       const N = detailLevel;
       const M = Math.max(1, Math.round(N * aspectRatio));
@@ -405,6 +437,7 @@ export default function Home() {
       }
       console.log(`Initial data mapping complete (using dominant cell color). Processed ${processedCells} cells. Starting region merging...`);
 
+      // ... (rest of the function remains the same)
 
       // --- Region Merging Step ---
       const keyToRgbMap = new Map<string, { r: number; g: number; b: number }>();
@@ -1181,18 +1214,35 @@ export default function Home() {
 
       <main className="w-full max-w-4xl flex flex-col items-center space-y-5 sm:space-y-6 relative"> {/* 添加 relative 定位 */}
         {/* Drop Zone */}
-        <div
-          onDrop={handleDrop} onDragOver={handleDragOver} onDragEnter={handleDragOver}
-          onClick={() => fileInputRef.current?.click()}
-          className="border-2 border-dashed border-gray-300 rounded-lg p-6 sm:p-8 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors w-full max-w-md flex flex-col justify-center items-center"
-          style={{ minHeight: '130px' }}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 sm:h-12 sm:w-12 text-gray-400 mb-2 sm:mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
-             <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-          </svg>
-          <p className="text-xs sm:text-sm text-gray-500">拖放图片到此处，或<span className="font-medium text-blue-600">点击选择文件</span></p>
-          <p className="text-xs text-gray-400 mt-1">支持 JPG, PNG 格式</p>
-        </div>
+        {!originalImageSrc && (
+          <>
+            <div
+              onDrop={handleDrop} onDragOver={handleDragOver} onDragEnter={handleDragOver}
+              onClick={() => fileInputRef.current?.click()}
+              className="border-2 border-dashed border-gray-300 rounded-lg p-6 sm:p-8 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors w-full max-w-md flex flex-col justify-center items-center"
+              style={{ minHeight: '130px' }}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 sm:h-12 sm:w-12 text-gray-400 mb-2 sm:mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+                 <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+              <p className="text-xs sm:text-sm text-gray-500">拖放图片到此处，或<span className="font-medium text-blue-600">点击选择文件</span></p>
+              <p className="text-xs text-gray-400 mt-1">支持 JPG, PNG 格式</p>
+            </div>
+            
+            {/* ++ 添加裁剪模式入口链接 ++ */}
+            <div className="w-full max-w-md flex justify-center">
+              <a 
+                href="/crop-page" 
+                className="text-sm text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                使用像素画底稿上传（精确对齐网格线）
+              </a>
+            </div>
+          </>
+        )}
 
         <input type="file" accept="image/jpeg, image/png" onChange={handleFileChange} ref={fileInputRef} className="hidden" />
 
